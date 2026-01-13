@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeatherNow</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">WEATHERNOW</div>
+    <div class="location-control">
+      <span class="label">Pesquisar clima em</span>
+      <input type="text" id="cityInput" placeholder="Digite a cidade" aria-label="Digite a cidade" />
+      <button id="searchButton" class="btn">Buscar</button>
+    </div>
+    <div class="unit-toggle" role="group" aria-label="Unidades">
+      <button class="unit active" data-unit="c">°C</button>
+      <button class="unit" data-unit="f">°F</button>
+    </div>
+  </header>
+
+  <main class="stage" id="result" class="result hidden">
+    <div class="glass left-panel">
+      <div class="now">
+        <div class="sun-times">
+          <div>Nascer do sol: <span id="sunrise">--:--</span></div>
+          <div>Por do sol: <span id="sunset">--:--</span></div>
+        </div>
+        <div class="now-main">
+          <div class="icon" id="weatherIcon">☀️</div>
+          <div class="now-text">
+            <div class="datetime" id="datetime">—</div>
+            <div class="temp" id="temperature">--°</div>
+            <div class="feels">Sensação térmica <span id="feelsLike">--°</span></div>
+            <div class="city" id="cityName"></div>
+            <div class="desc" id="description"></div>
+          </div>
+        </div>
+        <div class="more-details">
+          <div>Velocidade do vento: <span id="windspeed">--</span> m/s</div>
+          <div>Humidade do ar: <span id="humidity">--</span>%</div>
+          <div>Pressão: <span id="pressure">--</span> hPa</div>
+          <div>Probabilidade de precipitação: <span id="precip">--</span>%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass right-panel">
+      <h3>MAIS DETALHES</h3>
+      <div class="hours" id="hoursStrip"></div>
+    </div>
+  </main>
+
+  <section class="bottom-forecast">
+    <div class="inner">
+      <div class="title">PRÓXIMOS 7 DIAS</div>
+      <div class="forecast-container" id="forecastContainer"></div>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
