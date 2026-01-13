@@ -5,34 +5,78 @@ function fmtTime(iso) {
 }
 
 async function getWeather(city) {
+  // Validação de input
+  if (!city || city.trim().length === 0) {
+    throw new Error('Por favor, digite o nome de uma cidade.');
+  }
+  if (city.length > 100) {
+    throw new Error('Nome da cidade muito longo. Limite: 100 caracteres.');
+  }
+
   try {
-    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=pt&format=json`;
+    const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city.trim())}&count=1&language=pt&format=json`;
     console.log('Geo URL:', geoUrl);
-    const geoResponse = await fetch(geoUrl);
-    if (!geoResponse.ok) throw new Error(`Erro na geocodificação: ${geoResponse.status}`);
+    
+    // Timeout para geocodificação
+    const geoController = new AbortController();
+    const geoTimeoutId = setTimeout(() => geoController.abort(), 10000);
+    const geoResponse = await fetch(geoUrl, { signal: geoController.signal });
+    clearTimeout(geoTimeoutId);
+    
+    if (!geoResponse.ok) {
+      if (geoResponse.status === 429) {
+        throw new Error('Limite de taxa da API atingido. Tente novamente em alguns minutos.');
+      }
+      throw new Error(`Erro na geocodificação: ${geoResponse.status}`);
+    }
+    
     const geoData = await geoResponse.json();
-    if (!geoData.results || geoData.results.length === 0) throw new Error('Cidade não encontrada');
+    if (!geoData.results || geoData.results.length === 0) {
+      throw new Error('Cidade não encontrada');
+    }
 
     const { latitude, longitude, name, country } = geoData.results[0];
     if (typeof latitude !== 'number' || typeof longitude !== 'number' || isNaN(latitude) || isNaN(longitude)) {
       throw new Error('Coordenadas inválidas para a cidade');
     }
 
-    // Monta URL do forecast (removendo daily=pressure_msl e adicionando hourly=pressure_msl) e aplica fallback de timezone
+    // Monta URL do forecast
     let weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,weathercode,pressure_msl&daily=temperature_2m_max,temperature_2m_min,weathercode,windspeed_10m_max,sunrise,sunset&timezone=auto`;
     console.log('Weather URL:', weatherUrl);
-    let weatherResponse = await fetch(weatherUrl);
+    
+    // Timeout para weather
+    const weatherController = new AbortController();
+    const weatherTimeoutId = setTimeout(() => weatherController.abort(), 15000);
+    let weatherResponse = await fetch(weatherUrl, { signal: weatherController.signal });
+    clearTimeout(weatherTimeoutId);
+    
     if (weatherResponse.status === 400) {
       const fallbackUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m,weathercode,pressure_msl&daily=temperature_2m_max,temperature_2m_min,weathercode,windspeed_10m_max,sunrise,sunset&timezone=UTC`;
-      const fallbackResponse = await fetch(fallbackUrl);
-      if (fallbackResponse.ok) {
+      const fallbackController = new AbortController();
+      const fallbackTimeoutId = setTimeout(() => fallbackController.abort(), 15000);
+      weatherResponse = await fetch(fallbackUrl, { signal: fallbackController.signal });
+      clearTimeout(fallbackTimeoutId);
+      if (weatherResponse.ok) {
         weatherUrl = fallbackUrl;
-        weatherResponse = fallbackResponse;
       }
     }
-    if (!weatherResponse.ok) throw new Error(`Erro ao buscar dados do clima: ${weatherResponse.status} (URL: ${weatherUrl})`);
+    
+    if (!weatherResponse.ok) {
+      if (weatherResponse.status === 429) {
+        throw new Error('Limite de taxa da API atingido. Aguarde antes de tentar novamente.');
+      } else if (weatherResponse.status >= 500) {
+        throw new Error('Servidor da API indisponível. Tente novamente mais tarde.');
+      }
+      throw new Error(`Erro ao buscar dados do clima: ${weatherResponse.status} (URL: ${weatherUrl})`);
+    }
 
     const w = await weatherResponse.json();
+    
+    // Validação de estrutura de dados
+    if (!w.current_weather || !w.daily || !w.hourly) {
+      throw new Error('Dados incompletos retornados pela API.');
+    }
+    
     return {
       location: `${name}${country ? ', ' + country : ''}`,
       current: {
@@ -51,6 +95,12 @@ async function getWeather(city) {
       daily: w.daily
     };
   } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request cancelado por timeout. Verifique sua conexão.');
+    }
+    if (error.message.includes('fetch')) {
+      throw new Error('Erro de rede. Verifique sua conexão com a internet.');
+    }
     throw new Error(`Erro ao obter dados para ${city}: ${error.message}`);
   }
 }
@@ -143,9 +193,18 @@ function updateNowBlocks(data) {
   if (typeof hourly?.pressure?.[0] !== 'undefined') document.getElementById('pressure').textContent = Math.round(hourly.pressure[0]);
 }
 
+let isLoading = false;
+
 async function onSearch() {
+  if (isLoading) return; // Previne múltiplas requests
   const city = document.getElementById('cityInput').value.trim();
   if (!city) { alert('Por favor, digite o nome da cidade.'); return; }
+  
+  isLoading = true;
+  const button = document.getElementById('searchButton');
+  button.disabled = true;
+  button.textContent = 'Buscando...';
+  
   try {
     const data = await getWeather(city);
     updateNowBlocks(data);
@@ -154,6 +213,10 @@ async function onSearch() {
     document.getElementById('result').classList.remove('hidden');
   } catch (err) {
     alert(err.message);
+  } finally {
+    isLoading = false;
+    button.disabled = false;
+    button.textContent = 'Buscar';
   }
 }
 
