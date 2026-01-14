@@ -18,7 +18,14 @@ Aplicativo de previsão do tempo com foco em experiência mobile-first, usando O
   - Painéis "glass" com leitura confortável em telas pequenas.
   - Carrossel horizontal de horas e previsão de 7 dias.
 - Tema dinâmico por horário da cidade
-  - Cores de fundo variam conforme sunrise/sunset da localização.
+  - Cores de fundo variam conforme sunrise/sunset da localiza��ão.
+  - Classes CSS: theme-day, theme-evening, theme-night aplicadas via JS.
+- Imagem de fundo integrada
+  - `paisagem.avif` (com fallback JPG) como plano de fundo.
+  - Combinação com gradiente dinâmico usando `mix-blend-mode`.
+  - Filtros (grayscale/blur) aplicados somente à camada de imagem via `body::before` (não afeta o conteúdo).
+- Painéis com alturas alinhadas (desktop)
+  - O painel de "MAIS DETALHES" acompanha a altura do painel principal quando em layout lado a lado.
 
 ## Requisitos
 - Node.js 18+ (para suporte nativo a fetch no CLI e build TS).
@@ -52,9 +59,27 @@ Aplicativo de previsão do tempo com foco em experiência mobile-first, usando O
 - Tema por horário
   - Controle no `app.js` via `applyThemeByTime(currentIso, sunriseIso, sunsetIso)`.
   - CSS define gradientes para `theme-day`, `theme-evening`, `theme-night`.
-- Imagem de fundo
-  - Arquivo `paisagem.avif` deve estar na raiz do projeto (fallback `355655f3df061697299fa868317439ef.jpg`).
-  - Efeito visual aplicado com `body::before` (grayscale/blur + mix-blend-mode).
+
+## Privacidade, consentimento e cache
+- Banner de consentimento (index.html)
+  - Um banner solicita consentimento para uso do armazenamento local (cache de resultados) e oferece botão para limpar o cache.
+  - A limpeza remove chaves `geo:*` e `weather:*` do `localStorage`.
+  - O consentimento é salvo como `consent:local = '1'` no `localStorage`.
+- Boas práticas
+  - Não armazene dados sensíveis no cliente.
+  - Se necessário desabilitar cache sem consentimento, verifique a key `consent:local` dentro do utilitário de cache.
+
+## Variáveis de ambiente e chaves
+- Modelo `.env.example`
+  - Use como referência para configurar variáveis localmente (não comitar `.env`).
+  - Em produção, injete variáveis no ambiente do servidor/CI.
+- Importante
+  - Evite expor chaves no front-end. Se uma API exigir chave, use um backend/proxy para proteger os segredos.
+
+## Auditoria de licenças
+- Comando disponível:
+  - `npm run licenses` (executa `npx license-checker --summary`)
+- Use este comando antes de incorporar novas dependências, verificando compatibilidade de licenças.
 
 ## Dependências principais
 - Web: APIs nativas do navegador (fetch).

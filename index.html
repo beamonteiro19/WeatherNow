@@ -59,6 +59,53 @@
     </div>
   </section>
 
+  <!-- Consentimento de uso de dados locais (cache/localStorage) -->
+  <div id="consentBanner" style="position:fixed;left:0;right:0;bottom:0;z-index:50;display:none">
+    <div style="margin:0 auto;max-width:920px;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;background:rgba(0,0,0,.85);color:#f2f2f2;border-top:1px solid rgba(255,255,255,.15)">
+      <div style="font-size:14px;line-height:1.4">
+        Este site usa armazenamento local para melhorar a experiência (cache de resultados). Você pode aceitar ou limpar o cache a qualquer momento.
+      </div>
+      <div style="display:flex;gap:8px;white-space:nowrap">
+        <button id="clearCacheBtn" class="btn" style="background:transparent;color:#eee;border:1px solid rgba(255,255,255,.3)">Limpar cache</button>
+        <button id="acceptConsentBtn" class="btn">Aceitar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const CONSENT_KEY = 'consent:local';
+      const hasConsent = (() => {
+        try { return localStorage.getItem(CONSENT_KEY) === '1'; } catch { return false; }
+      })();
+      const banner = document.getElementById('consentBanner');
+      const acceptBtn = document.getElementById('acceptConsentBtn');
+      const clearBtn = document.getElementById('clearCacheBtn');
+
+      function showBanner(){ banner.style.display = 'block'; }
+      function hideBanner(){ banner.style.display = 'none'; }
+
+      if (!hasConsent) showBanner();
+
+      acceptBtn?.addEventListener('click', () => {
+        try { localStorage.setItem(CONSENT_KEY, '1'); } catch {}
+        hideBanner();
+      });
+
+      clearBtn?.addEventListener('click', () => {
+        try {
+          // Limpa chaves usadas pelo app: geo:*, weather:*
+          const keys = Object.keys(localStorage);
+          keys.forEach(k => { if (k.startsWith('geo:') || k.startsWith('weather:')) localStorage.removeItem(k); });
+        } catch {}
+        alert('Cache limpo.');
+      });
+
+      // Opcional: se desejar bloquear cache antes do consentimento, é possível
+      // checar o CONSENT_KEY dentro do utilitário de cache no futuro.
+    })();
+  </script>
+
   <script src="app.js"></script>
 </body>
 </html>
