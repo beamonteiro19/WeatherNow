@@ -4,6 +4,28 @@ function fmtTime(iso) {
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function applyThemeByTime(currentIso, sunriseIso, sunsetIso) {
+  try {
+    const now = new Date(currentIso).getTime();
+    const sunrise = sunriseIso ? new Date(sunriseIso).getTime() : null;
+    const sunset = sunsetIso ? new Date(sunsetIso).getTime() : null;
+
+    let theme = 'theme-night';
+    if (sunrise && sunset) {
+      // Daytime if between sunrise and sunset. Evening 1.5h around sunset.
+      const oneHalfHour = 90 * 60 * 1000;
+      if (now >= sunrise && now <= sunset - oneHalfHour) theme = 'theme-day';
+      else if (now > sunset - oneHalfHour && now <= sunset + oneHalfHour) theme = 'theme-evening';
+      else if (now > sunrise - oneHalfHour && now < sunrise) theme = 'theme-evening';
+      else theme = 'theme-night';
+    }
+    document.body.classList.remove('theme-day','theme-evening','theme-night');
+    document.body.classList.add(theme);
+  } catch (_) {
+    // fallback silently
+  }
+}
+
 async function getWeather(city) {
   // Validação de input
   if (!city || city.trim().length === 0) {
@@ -76,6 +98,11 @@ async function getWeather(city) {
     if (!w.current_weather || !w.daily || !w.hourly) {
       throw new Error('Dados incompletos retornados pela API.');
     }
+
+    // Aplica tema de acordo com horário local
+    const sunriseIso = w?.daily?.sunrise?.[0];
+    const sunsetIso = w?.daily?.sunset?.[0];
+    applyThemeByTime(w.current_weather.time, sunriseIso, sunsetIso);
     
     return {
       location: `${name}${country ? ', ' + country : ''}`,
